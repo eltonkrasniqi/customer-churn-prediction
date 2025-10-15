@@ -1,0 +1,37 @@
+# Churn Prediction Configuration
+
+# Random seed for reproducibility
+seed: 42
+
+# Feature flags
+use_mlflow: false
+use_xgboost: false
+use_streamlit: false
+use_calibration: false
+
+# Data configuration
+data:
+  telco_path: null  # Path to Telco Customer Churn CSV (optional)
+  synthetic_rows: 10000
+  test_size: 0.2
+
+# Paths
+paths:
+  raw: data/raw/synthetic_churn.csv
+  model: models/model.joblib
+  metrics: metrics.json
+  calibration_plot: models/calibration.png
+
+# Model hyperparameters
+model:
+  logistic_regression:
+    max_iter: 1000
+    class_weight: balanced
+    solver: lbfgs
+  
+  xgboost:
+    n_estimators: 300
+    max_depth: 6
+    learning_rate: 0.1
+    early_stopping_rounds: 10
+    eval_metric: auc

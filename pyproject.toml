@@ -1,0 +1,20 @@
+[project]
+name = "churn-prediction"
+version = "0.1.0"
+description = "A production-ready churn prediction ML service"
+authors = [{name = "Your Team"}]
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false

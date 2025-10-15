@@ -1,0 +1,7 @@
+# Risk band thresholds for churn probability
+# Low risk: probability < low
+# Medium risk: low <= probability < medium
+# High risk: probability >= medium
+
+low: 0.3
+medium: 0.6
