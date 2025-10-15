@@ -102,12 +102,16 @@ async def startup_event():
 
 @app.get("/")
 async def root(request: Request):
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "title": "Churn Prediction API",
-        "version": "0.1.0",
-        "description": "Predict customer churn probability with risk banding"
-    })
+    accept = request.headers.get("accept", "")
+    
+    if "text/html" in accept or not accept:
+        return templates.TemplateResponse("dashboard.html", {"request": request})
+    else:
+        return {
+            "message": "Churn Prediction API",
+            "version": "0.1.0",
+            "docs": "/docs"
+        }
 
 
 @app.get("/health")
@@ -118,6 +122,53 @@ async def health_check():
 @app.get("/ready", response_model=ReadyResponse)
 async def ready_check():
     return ReadyResponse(ready=hasattr(app.state, "model") and app.state.model is not None)
+
+
+@app.get("/api/analytics")
+async def get_analytics():
+    try:
+        if not DATA_PATH.exists():
+            raise HTTPException(status_code=404, detail="Dataset not found")
+        
+        df = pd.read_csv(DATA_PATH)
+        
+        model = get_model()
+        
+        feature_cols = [
+            "tenure_days", "tickets_last_30d", "avg_handle_time",
+            "first_contact_resolution", "sentiment_avg", "escalations_90d",
+            "channel", "plan_tier"
+        ]
+        X = df[feature_cols].copy()
+        
+        predictions = model.predict_proba(X)[:, 1]
+        df['churn_probability'] = predictions
+        
+        df['risk_band'] = df['churn_probability'].apply(
+            lambda p: "Low" if p < RISK_THRESHOLD_LOW else "Medium" if p < RISK_THRESHOLD_MEDIUM else "High"
+        )
+        
+        analytics = {
+            "total_customers": len(df),
+            "churn_rate": float(df['churned'].mean()) if 'churned' in df.columns else 0.0,
+            "high_risk_count": int((df['risk_band'] == 'High').sum()),
+            "risk_bands": {
+                "low": int((df['risk_band'] == 'Low').sum()),
+                "medium": int((df['risk_band'] == 'Medium').sum()),
+                "high": int((df['risk_band'] == 'High').sum())
+            },
+            "probability_bins": {
+                "labels": ['0-10%', '10-20%', '20-30%', '30-40%', '40-50%', 
+                          '50-60%', '60-70%', '70-80%', '80-90%', '90-100%'],
+                "counts": [int(x) for x in pd.cut(df['churn_probability'], bins=10).value_counts().sort_index().values]
+            }
+        }
+        
+        return analytics
+        
+    except Exception as e:
+        logger.error(f"Analytics error: {e}")
+        raise HTTPException(status_code=500, detail=f"Analytics failed: {str(e)}")
 
 
 @app.post("/predict", response_model=ChurnPredictionResponse)
